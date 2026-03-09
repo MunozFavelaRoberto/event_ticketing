@@ -1,21 +1,45 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 import 'package:kiosko/main.dart';
+import 'package:kiosko/services/theme_provider.dart';
+import 'package:kiosko/services/auth_service.dart';
+import 'package:kiosko/services/api_service.dart';
+import 'package:kiosko/services/data_provider.dart';
+
+// simple fake that overrides network/storage interactions
+class FakeAuthService extends AuthService {
+  @override
+  Future<bool> isLoggedIn() async => false;
+
+  @override
+  Future<bool> isAnyBiometricEnabled() async => false;
+}
+
+
+Widget buildAppForTest() {
+  final themeProvider = ThemeProvider();
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: themeProvider),
+      Provider<AuthService>(create: (_) => FakeAuthService()),
+      Provider<ApiService>(create: (_) => ApiService()),
+      ChangeNotifierProvider<DataProvider>(
+        create: (context) => DataProvider(
+          authService: Provider.of<AuthService>(context, listen: false),
+          apiService: Provider.of<ApiService>(context, listen: false),
+        ),
+      ),
+    ],
+    child: const KioskoApp(),
+  );
+}
 
 void main() {
   testWidgets('App shows loading indicator', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const KioskoApp());
+    await tester.pumpWidget(buildAppForTest());
 
-    // Verify that we show a loading spinner while checking auth state.
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 }

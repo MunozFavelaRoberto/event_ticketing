@@ -6,16 +6,11 @@ import 'package:kiosko/services/data_provider.dart';
 import 'package:kiosko/services/api_service.dart';
 import 'package:kiosko/services/auth_service.dart';
 import 'package:kiosko/screens/login_screen.dart';
-import 'package:kiosko/screens/billing_screen.dart';
-import 'package:kiosko/screens/edit_billing_screen.dart';
-import 'package:kiosko/screens/cards_screen.dart';
-import 'package:kiosko/screens/add_card_screen.dart';
 import 'package:kiosko/screens/home_screen.dart';
-import 'package:kiosko/screens/profile_screen.dart';
 import 'package:kiosko/screens/biometric_lock_screen.dart';
-import 'package:kiosko/screens/payment_screen.dart';
-import 'package:kiosko/screens/openpay_webview_screen.dart';
-import 'package:kiosko/screens/payment_success_screen.dart';
+import 'package:kiosko/screens/qr_generator_screen.dart';
+import 'package:kiosko/screens/qr_scanner_screen.dart';
+import 'package:kiosko/screens/profile_screen.dart';
 import 'package:kiosko/utils/app_routes.dart';
 
 Future<void> main() async {
@@ -70,21 +65,9 @@ class KioskoApp extends StatelessWidget {
       routes: {
         AppRoutes.login: (context) => const LoginScreen(),
         AppRoutes.home: (context) => const HomeScreen(),
+        AppRoutes.generateQr: (context) => const QrGeneratorScreen(),
+        AppRoutes.scanQr: (context) => const QrScannerScreen(),
         AppRoutes.profile: (context) => const ProfileScreen(),
-        AppRoutes.cards: (context) => const CardsScreen(),
-        AppRoutes.addCard: (context) => const AddCardScreen(),
-        AppRoutes.billing: (context) => const BillingScreen(),
-        AppRoutes.editBilling: (context) => const EditBillingScreen(),
-        AppRoutes.payment: (context) => const PaymentScreen(),
-        AppRoutes.openpayDeviceSession: (context) => const OpenPayDeviceSessionScreen(),
-        AppRoutes.openpayWebview: (context) => const OpenPayWebViewScreen(
-          cardNumber: '',
-          holderName: '',
-          expirationMonth: '',
-          expirationYear: '',
-          cvv2: '',
-        ),
-        AppRoutes.paymentSuccess: (context) => const PaymentSuccessScreen(),
       },
     );
   }

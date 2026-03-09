@@ -5,6 +5,12 @@ class AppRoutes {
 
   // Rutas principales
   static const String home = '/home';
+
+  // Routes for the ticket prototype
+  static const String generateQr = '/generate-qr';
+  static const String scanQr = '/scan-qr';
+
+  // deprecated/legacy routes (left for reference but not used)
   static const String profile = '/profile';
   static const String payment = '/payment';
   static const String paymentSuccess = '/payment-success';

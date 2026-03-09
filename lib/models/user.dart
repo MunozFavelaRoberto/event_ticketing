@@ -4,6 +4,8 @@ class User {
   final double balance;
   final String fullName;
   final String email;
+  final String? ticketId; // ID encriptado del boleto para QR
+  final String? ticketStatus; // Estado del boleto: 'active', 'used', 'expired', etc.
 
   User({
     required this.clientNumber,
@@ -11,6 +13,8 @@ class User {
     required this.balance,
     required this.fullName,
     required this.email,
+    this.ticketId,
+    this.ticketStatus,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -20,6 +24,8 @@ class User {
       balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
       fullName: json['fullName'] as String? ?? 'Nombre Desconocido',
       email: json['email'] as String? ?? 'email@desconocido.com',
+      ticketId: json['ticketId'] as String?,
+      ticketStatus: json['ticketStatus'] as String?,
     );
   }
 
@@ -30,6 +36,8 @@ class User {
       'balance': balance,
       'fullName': fullName,
       'email': email,
+      'ticketId': ticketId,
+      'ticketStatus': ticketStatus,
     };
   }
 }

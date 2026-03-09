@@ -30,7 +30,7 @@ class AppDrawer extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                ListTile(
+                  ListTile(
                   leading: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onSurface),
                   title: const Text("Mi perfil"),
                   onTap: () {
@@ -38,20 +38,20 @@ class AppDrawer extends StatelessWidget {
                     Navigator.pushNamed(context, AppRoutes.profile);
                   },
                 ),
-                                ListTile(
-                  leading: Icon(Icons.credit_card, color: Theme.of(context).colorScheme.onSurface),
-                  title: const Text("Tarjetas"),
+                ListTile(
+                  leading: Icon(Icons.qr_code, color: Theme.of(context).colorScheme.onSurface),
+                  title: const Text("Mostrar mi QR"),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.pushNamed(context, AppRoutes.cards);
+                    Navigator.pushNamed(context, AppRoutes.generateQr);
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.receipt_long_outlined, color: Theme.of(context).colorScheme.onSurface),
-                  title: const Text("Facturación"),
+                  leading: Icon(Icons.qr_code_scanner, color: Theme.of(context).colorScheme.onSurface),
+                  title: const Text("Escanear QR"),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.pushNamed(context, AppRoutes.billing);
+                    Navigator.pushNamed(context, AppRoutes.scanQr);
                   },
                 ),
                 const Divider(),

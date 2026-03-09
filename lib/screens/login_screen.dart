@@ -269,6 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       key: _formKey,
                       child: Column(
                         children: [
+                          // logo original en la parte superior
                           Image.asset('assets/images/cmapa_logo.png', height: 100, width: 100),
                           const SizedBox(height: 40),
 
@@ -282,7 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 focusNode: _userFocusNode,
                                 style: TextStyle(color: theme.brightness == Brightness.dark ? Colors.white : Colors.black),
                                 decoration: InputDecoration(
-                                  hintText: 'Correo',
+                                  hintText: 'Usuario',
                                   hintStyle: TextStyle(color: theme.brightness == Brightness.dark ? Colors.white70 : Colors.black54),
                                   prefixIcon: Icon(Icons.email_outlined, color: theme.brightness == Brightness.dark ? Colors.white : Colors.black),
                                   errorStyle: const TextStyle(color: Color(0xFFCF6679)),
@@ -382,7 +383,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               child: _isLoading
                                   ? CircularProgressIndicator(color: Colors.green)
-                                  : Text("Iniciar sesión", style: theme.textTheme.labelLarge?.copyWith(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                                  : Text("INICIAR SESIÓN", style: theme.textTheme.labelLarge?.copyWith(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                             ),
                           ),
                         ],

@@ -1,10 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:kiosko/models/card.dart';
-import 'package:kiosko/models/payment_detail.dart' as payment_detail;
-import 'package:kiosko/models/payment_history.dart' as payment_history;
-import 'package:kiosko/models/payment_response.dart';
 
 class ApiService {
   // Singleton pattern
@@ -119,79 +115,25 @@ class ApiService {
     }
   }
 
-  // Obtener tarjetas del cliente
-  Future<List<CardModel>> getCards({Map<String, String>? headers}) async {
-    final response = await get('/client/cards', headers: headers);
-    final data = response['data'];
-    final items = data['items'] as List;
-    return items.map((item) => CardModel.fromJson(item)).toList();
-  }
 
-  // Obtener detalles de pagos pendientes
-  Future<List<payment_detail.PaymentDetail>> getOutstandingPayments({Map<String, String>? headers}) async {
-    final response = await get('/client/payments/outstanding', headers: headers);
-    final data = response['data'];
-    final payments = data['payments'] as List;
-    return payments.map((item) => payment_detail.PaymentDetail.fromJson(item)).toList();
-  }
-
-  // Obtener historial de pagos
-  Future<List<payment_history.PaymentHistory>> getPaymentHistory({Map<String, String>? headers}) async {
-    final response = await get('/client/payments/history', headers: headers);
-    final data = response['data'];
-    final items = data['items'] as List;
-    return items.map((item) => payment_history.PaymentHistory.fromJson(item)).toList();
-  }
-
-  // Descargar factura en PDF o XML
-  Future<String> downloadInvoice({required String headers, required int paymentId, required String fileExtension}) async {
-    final response = await post(
-      '/client/payments/invoice/file',
-      headers: {'Authorization': headers},
-      body: {
-        'id': paymentId,
-        'file_extention': fileExtension,
-      },
-    );
-    final data = response['data'];
-    return data['file'] as String;
-  }
-
-  // Descargar ticket de pago
-  Future<String> downloadTicket({required String headers, required int paymentId}) async {
-    final response = await post(
-      '/client/payments/ticket',
-      headers: {'Authorization': headers},
-      body: {
-        'id': paymentId,
-      },
-    );
-    final data = response['data'];
-    return data['file'] as String;
-  }
-
-  // Procesar pago
-  Future<PaymentResponse> processPayment({
-    required String headers,
-    required List<Map<String, int>> payments,
-    required double total,
-    required String tokenId,
-    required String deviceSessionId,
-    required bool isInvoiceRequired,
-  }) async {
-    final response = await post(
-      '/client/payments/pay',
-      headers: {'Authorization': headers},
-      body: {
-        'payments': payments,
-        'total': total,
-        'token_id': tokenId,
-        'device_session_id': deviceSessionId,
-        'use_card_points': null,
-        'is_invoice_required': isInvoiceRequired,
-      },
-    );
-    return PaymentResponse.fromJson(response['data']);
+  // Simulador de validación de boleto con mensajes específicos.
+  Future<Map<String, dynamic>> validateTicket(String qrCode) async {
+    // retraso para simular latencia
+    await Future.delayed(const Duration(seconds: 2)); // Aumento el retraso para apreciar mejor el estado de validación
+    
+    // Simular diferentes escenarios
+    if (qrCode == "J63qRTDLub5NuZvP+kb8YIorGS6qFYHKVo6u7179stY=") {
+      return {'isValid': true, 'message': 'Acceso concedido'};
+    } else if (qrCode == "CODIGO_INVALIDO_TEST_123") {
+      return {'isValid': false, 'message': 'Código inválido o formato incorrecto'};
+    } else if (qrCode == "CODIGO_USADO_TEST_456") {
+      return {'isValid': false, 'message': 'Boleto ya utilizado'};
+    } else if (qrCode == "ERROR_RED_TEST_789") {
+      // Simular un error de red
+      throw Exception('Network error: Could not connect to server.');
+    } else {
+      return {'isValid': false, 'message': 'Boleto no encontrado'};
+    }
   }
 
   // Cerrar cliente (llamar al salir de la app)
