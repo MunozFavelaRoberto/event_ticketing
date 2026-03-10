@@ -53,6 +53,9 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
       // Simular una carga asíncrona de datos (como si viniera de la API)
       await Future.delayed(const Duration(milliseconds: 500)); 
 
+      // Delay obligatorio de 1 segundo para mostrar que se procesó
+      await Future.delayed(const Duration(seconds: 1));
+
       // Verificar que el widget sigue montado
       if (!mounted) return;
 
@@ -107,23 +110,32 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Bloquear UI durante carga o reintento
+    final isBlocked = _isLoading || _isRetrying;
+    
     return Scaffold(
       appBar: AppBar(title: const Text(_title)),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _instructionText,
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+      body: AbsorbPointer(
+        absorbing: isBlocked,
+        child: Opacity(
+          opacity: isBlocked ? 0.5 : 1.0,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _instructionText,
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+                _buildQrContent(),
+                const SizedBox(height: 20),
+                _buildBottomActions(),
+                const SizedBox(height: 16),
+                _buildQrSelector(),
+              ],
             ),
-            const SizedBox(height: 20),
-            _buildQrContent(),
-            const SizedBox(height: 20),
-            _buildBottomActions(),
-            const SizedBox(height: 16),
-            _buildQrSelector(),
-          ],
+          ),
         ),
       ),
     );
@@ -133,7 +145,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
     if (_isLoading) {
       return Column(
         children: const [
-          CircularProgressIndicator(),
+          CircularProgressIndicator(color: Colors.green),
           SizedBox(height: 10),
           Text(_loadingQr),
         ],

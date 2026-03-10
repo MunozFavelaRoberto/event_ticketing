@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:kiosko/services/api_service.dart';
 import 'package:flutter/services.dart';
+import 'package:kiosko/screens/ticket_result_screen.dart';
 
 enum ScanState { waiting, validating, success, failure, permissionDenied, networkError }
 
@@ -36,6 +37,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
   Animation<double>? _animation;
   
   bool _isInitialized = false;
+  bool _isProcessing = false; // Para bloquear UI durante validación
 
   // Textos
   static const String _scanningText = 'ESCANEANDO...';
@@ -46,7 +48,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
   static const String _tryAgain = 'Intentar de nuevo';
 
   static const Map<TicketErrorType, String> _errorMessages = {
-    TicketErrorType.invalidFormat: 'Código inválido o formato incorrecto',
+    TicketErrorType.invalidFormat: 'Qr inválido',
     TicketErrorType.alreadyUsed: 'Boleto ya utilizado',
     TicketErrorType.notFound: 'Boleto no encontrado',
     TicketErrorType.eventNotStarted: 'El evento aún no ha iniciado',
@@ -114,6 +116,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
   }
 
   void _handleDetection(BarcodeCapture capture) async {
+    if (!mounted) return;
+    if (_isProcessing) return;
+    
     if (_state == ScanState.validating || 
         _state == ScanState.permissionDenied || 
         _state == ScanState.networkError ||
@@ -126,22 +131,28 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
     final String? code = barcodes.first.rawValue;
     if (code == null || code.isEmpty) return;
 
+    // Bloquear UI durante validación
     setState(() {
+      _isProcessing = true;
       _state = ScanState.validating;
       _errorType = TicketErrorType.none;
     });
 
     try {
       final result = await _apiService.validateTicket(code);
+      
+      // Delay obligatorio de 1 segundo para mostrar que se procesó
+      await Future.delayed(const Duration(seconds: 1));
+      
       final bool valid = result['isValid'] as bool;
       final String message = result['message'] as String? ?? '';
 
+      if (!mounted) return;
+      
       if (valid) {
         HapticFeedback.lightImpact();
-        setState(() {
-          _state = ScanState.success;
-          _errorType = TicketErrorType.none;
-        });
+        // Navegar a pantalla de resultado
+        _navigateToResult(isValid: true, message: '');
       } else {
         HapticFeedback.vibrate();
         await Future.delayed(const Duration(milliseconds: 100));
@@ -149,49 +160,75 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
         
         final errorType = _parseErrorType(message);
         
-        setState(() {
-          _state = ScanState.failure;
-          _errorType = errorType;
-        });
-        
-        _showSnackBar(message.isNotEmpty ? message : _getErrorMessage());
+        // Navegar a pantalla de resultado
+        _navigateToResult(
+          isValid: false, 
+          message: message.isNotEmpty ? message : _getErrorMessage(),
+          errorType: errorType.name,
+        );
       }
     } on Exception catch (e) {
       debugPrint('Error al validar ticket: $e');
       final errorStr = e.toString().toLowerCase();
       
+      if (!mounted) return;
+      
+      // Delay obligatorio de 1 segundo
+      await Future.delayed(const Duration(seconds: 1));
+      
       if (errorStr.contains('network') || errorStr.contains('socket') || errorStr.contains('conexión')) {
-        setState(() {
-          _state = ScanState.networkError;
-          _errorType = TicketErrorType.networkError;
-        });
+        _navigateToResult(
+          isValid: false,
+          message: 'Error de red. Verifica tu conexión.',
+          errorType: 'networkError',
+        );
       } else {
-        _showSnackBar('Error: ${e.toString()}');
-        setState(() {
-          _state = ScanState.failure;
-          _errorType = TicketErrorType.unknown;
-        });
-      }
-    } finally {
-      await Future.delayed(const Duration(seconds: 3));
-      if (mounted) {
-        setState(() {
-          _state = ScanState.waiting;
-          _errorType = TicketErrorType.none;
-        });
+        _navigateToResult(
+          isValid: false,
+          message: 'Error: ${e.toString()}',
+          errorType: 'unknown',
+        );
       }
     }
   }
 
-  void _showSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade700,
-        duration: const Duration(seconds: 3),
+  void _navigateToResult({
+    required bool isValid,
+    required String message,
+    String? errorType,
+  }) {
+    // Pausar el escáner temporalmente
+    _controller.stop();
+    
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: true,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return TicketResultScreen(
+            isValid: isValid,
+            message: message,
+            errorType: errorType,
+          );
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
       ),
-    );
+    ).then((_) {
+      // Cuando regrese del resultado, reiniciar el escáner
+      if (mounted) {
+        _controller.start();
+        setState(() {
+          _state = ScanState.waiting;
+          _errorType = TicketErrorType.none;
+          _isProcessing = false;
+        });
+      }
+    });
   }
 
   Color _backgroundColor() {
@@ -229,7 +266,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: const [
-            CircularProgressIndicator(color: Colors.white),
+            CircularProgressIndicator(color: Colors.green),
             SizedBox(height: 16),
             Text('Validando...', style: TextStyle(color: Colors.white, fontSize: 18)),
           ],
@@ -344,7 +381,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: const [
-              CircularProgressIndicator(color: Colors.white),
+              CircularProgressIndicator(color: Colors.green),
               SizedBox(height: 16),
               Text('Iniciando cámara...', style: TextStyle(color: Colors.white)),
             ],
@@ -358,16 +395,17 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
       appBar: AppBar(
         title: const Text('Escaner de Boletos'),
         backgroundColor: _backgroundColor(),
+        foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
             icon: Icon(_isFlashOn ? Icons.flash_on : Icons.flash_off),
-            onPressed: _toggleFlash,
+            onPressed: _isProcessing ? null : _toggleFlash,
             tooltip: 'Linterna',
           ),
           IconButton(
             icon: Icon(_isFrontCamera ? Icons.camera_rear : Icons.camera_front),
-            onPressed: _switchCamera,
+            onPressed: _isProcessing ? null : _switchCamera,
             tooltip: 'Cambiar cámara',
           ),
         ],
@@ -376,7 +414,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
         children: [
           MobileScanner(
             controller: _controller,
-            onDetect: _handleDetection,
+            onDetect: _isProcessing ? null : _handleDetection,
             fit: BoxFit.cover,
           ),
           Container(color: Colors.black.withValues(alpha: 0.3)),
@@ -385,28 +423,46 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
             bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              color: _backgroundColor().withValues(alpha: 0.8),
-              child: SafeArea(
-                top: false,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      _state == ScanState.waiting ? Icons.qr_code_scanner : 
-                      _state == ScanState.validating ? Icons.hourglass_top :
-                      _state == ScanState.success ? Icons.check_circle : Icons.error,
-                      color: Colors.white, size: 20,
+            child: AbsorbPointer(
+              absorbing: _isProcessing,
+              child: Opacity(
+                opacity: _isProcessing ? 0.5 : 1.0,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  color: _backgroundColor().withValues(alpha: 0.8),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _state == ScanState.validating
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.green,
+                                ),
+                              )
+                            : Icon(
+                                _state == ScanState.waiting
+                                    ? Icons.qr_code_scanner
+                                    : _state == ScanState.success
+                                        ? Icons.check_circle
+                                        : Icons.error,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _state == ScanState.waiting ? 'Apunta al código QR' :
+                          _state == ScanState.validating ? 'Validando...' :
+                          _state == ScanState.success ? 'Acceso concedido' : 'Acceso denegado',
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _state == ScanState.waiting ? 'Apunta al código QR' :
-                      _state == ScanState.validating ? 'Validando...' :
-                      _state == ScanState.success ? 'Acceso concedido' : 'Acceso denegado',
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
