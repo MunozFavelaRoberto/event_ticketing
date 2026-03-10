@@ -12,7 +12,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.grey.shade700,
-        title: Image.asset("assets/images/cmapa_logo.png", height: 40),
+        title: Image.asset("assets/images/svr_logo.png", height: 40),
         centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [

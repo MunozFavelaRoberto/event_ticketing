@@ -270,7 +270,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         children: [
                           // logo original en la parte superior
-                          Image.asset('assets/images/cmapa_logo.png', height: 100, width: 100),
+                          Image.asset('assets/images/svr_logo.png', height: 100, width: 100),
                           const SizedBox(height: 40),
 
                           // Campo Email
