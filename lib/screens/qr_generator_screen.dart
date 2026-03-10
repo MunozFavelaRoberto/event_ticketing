@@ -12,7 +12,7 @@ class QrGeneratorScreen extends StatefulWidget {
 
 class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
   // Constantes para los textos
-  static const String _title = "Mi Boleto Digital";
+  static const String _title = "Mi boleto digital";
   static const String _instructionText = "Muestra este código en la entrada";
   static const String _noQrDataError = "No se pudo generar el QR: datos de usuario no disponibles.";
   static const String _noTicketError = "No tienes un boleto activo en este momento.";

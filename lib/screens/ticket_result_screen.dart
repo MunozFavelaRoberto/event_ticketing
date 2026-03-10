@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 
 /// Pantalla que muestra el resultado de la validación del ticket
-/// Se muestra en pantalla completa y vuelve automáticamente al escáner después de 3 segundos
+/// Se muestra en pantalla completa y vuelve automáticamente al escáner después de X segundos
 class TicketResultScreen extends StatefulWidget {
   final bool isValid;
   final String message;
   final String? errorType;
+  final int delaySeconds; // Delay dinámico en segundos
 
   const TicketResultScreen({
     super.key,
     required this.isValid,
     required this.message,
     this.errorType,
+    this.delaySeconds = 3, // Valor por defecto
   });
 
   @override
@@ -24,6 +27,9 @@ class _TicketResultScreenState extends State<TicketResultScreen>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  
+  late int _countdown;
+  Timer? _countdownTimer;
 
   bool get _isNetworkError => widget.errorType == 'networkError';
 
@@ -57,6 +63,10 @@ class _TicketResultScreenState extends State<TicketResultScreen>
     
     _animationController.forward();
     
+    // Inicializar countdown
+    _countdown = widget.delaySeconds;
+    _startCountdown();
+    
     // Feedback háptico
     if (widget.isValid) {
       HapticFeedback.lightImpact();
@@ -67,17 +77,31 @@ class _TicketResultScreenState extends State<TicketResultScreen>
       });
     }
 
-    // Volver al escáner después de 3 segundos
-    Future.delayed(const Duration(seconds: 3), () {
+    // Volver al escáner después del delay
+    Future.delayed(Duration(seconds: widget.delaySeconds), () {
       if (mounted) {
-        // Regresar al escáner (quitando esta pantalla del stack)
         Navigator.of(context).pop();
+      }
+    });
+  }
+
+  void _startCountdown() {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _countdown--;
+        });
+        
+        if (_countdown <= 0) {
+          timer.cancel();
+        }
       }
     });
   }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _animationController.dispose();
     super.dispose();
   }
@@ -177,7 +201,7 @@ class _TicketResultScreenState extends State<TicketResultScreen>
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      'Volviendo al escáner...',
+                      'Volviendo al escáner en $_countdown...',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,

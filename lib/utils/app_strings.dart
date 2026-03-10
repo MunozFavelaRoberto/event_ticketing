@@ -5,7 +5,7 @@ class AppStrings {
   AppStrings._();
 
   // ========== QR Generator ==========
-  static const String qrTitle = "Mi Boleto Digital";
+  static const String qrTitle = "Mi boleto digital";
   static const String qrInstruction = "Muestra este código en la entrada";
   static const String qrLoading = "Generando QR...";
   static const String qrNoData = "No se pudo generar el QR: datos de usuario no disponibles.";

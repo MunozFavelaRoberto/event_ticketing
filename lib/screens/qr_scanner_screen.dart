@@ -197,6 +197,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
     required String message,
     String? errorType,
   }) {
+    // Delay para volver al escáner después de mostrar resultado
+    const int resultDelaySeconds = 3;
+    
     // Pausar el escáner temporalmente
     _controller.stop();
     
@@ -208,6 +211,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
             isValid: isValid,
             message: message,
             errorType: errorType,
+            delaySeconds: resultDelaySeconds,
           );
         },
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
