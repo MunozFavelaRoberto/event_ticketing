@@ -30,22 +30,6 @@ class AppDrawer extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                  ListTile(
-                  leading: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onSurface),
-                  title: const Text("Mi perfil"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, AppRoutes.profile);
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.qr_code, color: Theme.of(context).colorScheme.onSurface),
-                  title: const Text("Mostrar mi QR"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, AppRoutes.generateQr);
-                  },
-                ),
                 ListTile(
                   leading: Icon(Icons.qr_code_scanner, color: Theme.of(context).colorScheme.onSurface),
                   title: const Text("Escanear QR"),
