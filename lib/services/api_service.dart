@@ -15,6 +15,9 @@ class ApiService {
   static const String baseUrlApi = 'https://apideveventaccess.svr.com.mx/api';
   String get baseUrl => baseUrlApi;
 
+  // Endpoint de check-in de ticket
+  static const String checkinEndpoint = '/v1/staff/events/tickets/checkin';
+
   static http.Client _createHttpClient() {
     // ============================================
     // MODO DESARROLLO: Aceptar cualquier certificado SSL
@@ -132,23 +135,54 @@ class ApiService {
   }
 
 
-  // Simulador de validación de boleto con mensajes específicos.
-  Future<Map<String, dynamic>> validateTicket(String qrCode) async {
-    // retraso para simular latencia
-    await Future.delayed(const Duration(seconds: 2)); // Aumento el retraso para apreciar mejor el estado de validación
-    
-    // Simular diferentes escenarios
-    if (qrCode == "J63qRTDLub5NuZvP+kb8YIorGS6qFYHKVo6u7179stY=") {
-      return {'isValid': true, 'message': 'Acceso concedido'};
-    } else if (qrCode == "CODIGO_INVALIDO_TEST_123") {
-      return {'isValid': false, 'message': 'Código inválido o formato incorrecto'};
-    } else if (qrCode == "CODIGO_USADO_TEST_456") {
-      return {'isValid': false, 'message': 'Boleto ya utilizado'};
-    } else if (qrCode == "ERROR_RED_TEST_789") {
-      // Simular un error de red
-      throw Exception('Network error: Could not connect to server.');
+  // Realizar check-in de ticket
+  Future<Map<String, dynamic>> checkinTicket(String saleItemId, String authToken) async {
+    try {
+      final uri = Uri.parse('$baseUrl$checkinEndpoint');
+      
+      final response = await _client.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+        body: jsonEncode({
+          'sale_item_id': saleItemId,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      return _handleCheckinResponse(response);
+    } on SocketException {
+      throw Exception('No hay conexión a internet');
+    } on http.ClientException {
+      throw Exception('Error de conexión');
+    } catch (e) {
+      throw Exception('Error desconocido: $e');
+    }
+  }
+
+  // Manejar respuesta de check-in
+  Map<String, dynamic> _handleCheckinResponse(http.Response response) {
+    final statusCode = response.statusCode;
+    final body = response.body;
+
+    if (statusCode >= 200 && statusCode < 300) {
+      if (body.isNotEmpty) {
+        try {
+          return jsonDecode(body);
+        } catch (e) {
+          throw Exception('Error al parsear JSON: $e');
+        }
+      }
+      return {};
+    } else if (statusCode == 401) {
+      throw Exception('No autorizado');
+    } else if (statusCode == 404) {
+      throw Exception('Boleto no encontrado');
+    } else if (statusCode == 409) {
+      throw Exception('Boleto ya utilizado');
     } else {
-      return {'isValid': false, 'message': 'Boleto no encontrado'};
+      throw Exception('Error HTTP $statusCode: $body');
     }
   }
 

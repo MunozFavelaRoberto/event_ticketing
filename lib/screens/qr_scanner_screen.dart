@@ -1,22 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:kiosko/services/api_service.dart';
+import 'package:kiosko/services/auth_service.dart';
 import 'package:flutter/services.dart';
 import 'package:kiosko/screens/ticket_result_screen.dart';
 import 'package:kiosko/utils/app_strings.dart';
 
 enum ScanState { waiting, validating, success, failure, permissionDenied, networkError }
-
-enum TicketErrorType {
-  none,
-  invalidFormat,
-  alreadyUsed,
-  notFound,
-  eventNotStarted,
-  eventEnded,
-  networkError,
-  unknown
-}
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -27,8 +17,8 @@ class QrScannerScreen extends StatefulWidget {
 
 class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProviderStateMixin {
   ScanState _state = ScanState.waiting;
-  TicketErrorType _errorType = TicketErrorType.none;
   final ApiService _apiService = ApiService();
+  final AuthService _authService = AuthService();
   
   late MobileScannerController _controller;
   
@@ -38,17 +28,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
   Animation<double>? _animation;
   
   bool _isInitialized = false;
-  bool _isProcessing = false; // Para bloquear UI durante validación
-
-  static const Map<TicketErrorType, String> _errorMessages = {
-    TicketErrorType.invalidFormat: AppStrings.ticketErrorInvalid,
-    TicketErrorType.alreadyUsed: AppStrings.ticketErrorUsed,
-    TicketErrorType.notFound: AppStrings.ticketErrorNotFound,
-    TicketErrorType.eventNotStarted: AppStrings.ticketErrorEventNotStarted,
-    TicketErrorType.eventEnded: AppStrings.ticketErrorEventEnded,
-    TicketErrorType.networkError: AppStrings.ticketErrorNetwork,
-    TicketErrorType.unknown: AppStrings.ticketErrorUnknown,
-  };
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -83,31 +63,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
     super.dispose();
   }
 
-  TicketErrorType _parseErrorType(String message) {
-    final lowerMessage = message.toLowerCase();
-    if (lowerMessage.contains('usado') || lowerMessage.contains('used')) {
-      return TicketErrorType.alreadyUsed;
-    } else if (lowerMessage.contains('no encontrado') || lowerMessage.contains('not found')) {
-      return TicketErrorType.notFound;
-    } else if (lowerMessage.contains('no iniciado') || lowerMessage.contains('not started')) {
-      return TicketErrorType.eventNotStarted;
-    } else if (lowerMessage.contains('finalizado') || lowerMessage.contains('ended')) {
-      return TicketErrorType.eventEnded;
-    } else if (lowerMessage.contains('inválido') || lowerMessage.contains('invalid') || lowerMessage.contains('formato')) {
-      return TicketErrorType.invalidFormat;
-    } else if (lowerMessage.contains('network') || lowerMessage.contains('red') || lowerMessage.contains('conexión')) {
-      return TicketErrorType.networkError;
-    }
-    return TicketErrorType.unknown;
-  }
-
-  String _getErrorMessage() {
-    if (_errorType == TicketErrorType.none) {
-      return _errorMessages[TicketErrorType.unknown]!;
-    }
-    return _errorMessages[_errorType] ?? _errorMessages[TicketErrorType.unknown]!;
-  }
-
   void _handleDetection(BarcodeCapture capture) async {
     if (!mounted) return;
     if (_isProcessing) return;
@@ -128,36 +83,62 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
     setState(() {
       _isProcessing = true;
       _state = ScanState.validating;
-      _errorType = TicketErrorType.none;
     });
 
     try {
-      final result = await _apiService.validateTicket(code);
+      // Enviar el QR al backend para check-in
+      final authToken = await _authService.getToken() ?? '';
+      final result = await _apiService.checkinTicket(code, authToken);
       
       // Delay obligatorio de 1 segundo para mostrar que se procesó
       await Future.delayed(const Duration(seconds: 1));
       
-      final bool valid = result['isValid'] as bool;
+      // Obtener datos de la respuesta
       final String message = result['message'] as String? ?? '';
+      final Map<String, dynamic>? data = result['data'] as Map<String, dynamic>?;
+      
+      // Determinar si fue exitoso:
+      // is_checked_in = 1 → NO está checkeado (puede pasar = true)
+      // is_checked_in = 0 → YA está checkeado (no puede pasar = false)
+      bool isValid = false;
+      if (data != null) {
+        final isCheckedIn = data['is_checked_in'] as int? ?? 1;
+        // Si es 1, NO está checkeado → puede pasar
+        // Si es 0, YA está checkeado → no puede pasar
+        isValid = isCheckedIn == 1;
+      }
+      
+      // Extraer datos del asistente
+      String? ticketCode;
+      String? fullName;
+      if (data != null) {
+        ticketCode = data['ticket_code'] as String?;
+        final assistant = data['assistant'] as Map<String, dynamic>?;
+        if (assistant != null) {
+          fullName = assistant['full_name'] as String?;
+        }
+      }
 
       if (!mounted) return;
       
-      if (valid) {
+      if (isValid) {
         HapticFeedback.lightImpact();
-        // Navegar a pantalla de resultado
-        _navigateToResult(isValid: true, message: '');
+        _navigateToResult(
+          isValid: true, 
+          message: message,
+          ticketCode: ticketCode,
+          fullName: fullName,
+        );
       } else {
         HapticFeedback.vibrate();
         await Future.delayed(const Duration(milliseconds: 100));
         HapticFeedback.vibrate();
         
-        final errorType = _parseErrorType(message);
-        
-        // Navegar a pantalla de resultado
         _navigateToResult(
           isValid: false, 
-          message: message.isNotEmpty ? message : _getErrorMessage(),
-          errorType: errorType.name,
+          message: message,
+          ticketCode: ticketCode,
+          fullName: fullName,
         );
       }
     } on Exception catch (e) {
@@ -173,13 +154,11 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
         _navigateToResult(
           isValid: false,
           message: AppStrings.scannerNetworkError,
-          errorType: 'networkError',
         );
       } else {
         _navigateToResult(
           isValid: false,
-          message: 'Error: ${e.toString()}',
-          errorType: 'unknown',
+          message: e.toString(),
         );
       }
     }
@@ -188,12 +167,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
   void _navigateToResult({
     required bool isValid,
     required String message,
-    String? errorType,
+    String? ticketCode,
+    String? fullName,
   }) {
-    // Delay para volver al escáner después de mostrar resultado
-    const int resultDelaySeconds = 3;
-    
-    // Pausar el escáner temporalmente
     _controller.stop();
     
     Navigator.of(context).push(
@@ -203,8 +179,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           return TicketResultScreen(
             isValid: isValid,
             message: message,
-            errorType: errorType,
-            delaySeconds: resultDelaySeconds,
+            ticketCode: ticketCode,
+            fullName: fullName,
           );
         },
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -216,12 +192,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
         transitionDuration: const Duration(milliseconds: 300),
       ),
     ).then((_) {
-      // Cuando regrese del resultado, reiniciar el escáner
       if (mounted) {
         _controller.start();
         setState(() {
           _state = ScanState.waiting;
-          _errorType = TicketErrorType.none;
           _isProcessing = false;
         });
       }
@@ -280,12 +254,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
       case ScanState.failure:
         return Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cancel, color: Colors.white, size: 150),
-            const SizedBox(height: 8),
+          children: const [
+            Icon(Icons.cancel, color: Colors.white, size: 150),
+            SizedBox(height: 8),
             Text(AppStrings.scannerAccessDenied, style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 8),
-            Text(_getErrorMessage(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 16)),
           ],
         );
       case ScanState.networkError:
@@ -294,7 +266,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           children: [
             const Icon(Icons.signal_wifi_off, color: Colors.white, size: 150),
             const SizedBox(height: 8),
-            Text(AppStrings.scannerNetworkError, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+            Text(AppStrings.scannerNetworkError, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: _restartScanner,
@@ -309,11 +281,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           children: [
             const Icon(Icons.no_photography, color: Colors.white, size: 150),
             const SizedBox(height: 8),
-            Text(AppStrings.scannerPermissionDenied, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 20)),
+            Text(AppStrings.scannerPermissionDenied, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 20)),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () {
-                // Abrir configuración de la app
                 setState(() => _state = ScanState.waiting);
               },
               icon: const Icon(Icons.refresh),
@@ -365,7 +336,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
   void _restartScanner() {
     setState(() {
       _state = ScanState.waiting;
-      _errorType = TicketErrorType.none;
     });
   }
 
