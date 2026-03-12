@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 
 class ApiService {
   // Singleton pattern
@@ -11,11 +12,26 @@ class ApiService {
   final http.Client _client = _createHttpClient();
 
   // URL de la API real
-  static const String baseUrlApi = 'https://apipagoselectronicos.svr.com.mx/api';
+  static const String baseUrlApi = 'https://apideveventaccess.svr.com.mx/api';
   String get baseUrl => baseUrlApi;
 
   static http.Client _createHttpClient() {
-    return http.Client();
+    // ============================================
+    // MODO DESARROLLO: Aceptar cualquier certificado SSL
+    // HABILITADO actualmente (para dispositivos con problemas de certificado como el moto G41)
+    // ============================================
+    final securityContext = SecurityContext(withTrustedRoots: true);
+    final httpClient = HttpClient(context: securityContext)
+      ..connectionTimeout = const Duration(seconds: 10)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+    
+    return IOClient(httpClient);
+
+    // ============================================
+    // MODO PRODUCCIÓN: Usar certificado válido del servidor
+    // Para producción: eliminar las líneas de arriba y descomentar abajo
+    // Descomentar esta línea para producción:
+    // return http.Client();
   }
 
   // Método GET

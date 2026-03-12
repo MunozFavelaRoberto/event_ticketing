@@ -1,16 +1,12 @@
 class User {
-  final String clientNumber;
-  final String status;
-  final double balance;
+  final int id;
   final String fullName;
   final String email;
-  final String? ticketId; // ID encriptado del boleto para QR
-  final String? ticketStatus; // Estado del boleto: 'active', 'used', 'expired', etc.
+  final String? ticketId;
+  final String? ticketStatus;
 
   User({
-    required this.clientNumber,
-    required this.status,
-    required this.balance,
+    required this.id,
     required this.fullName,
     required this.email,
     this.ticketId,
@@ -19,10 +15,8 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      clientNumber: json['clientNumber'] as String? ?? 'N/A',
-      status: json['status'] as String? ?? 'Desconocido',
-      balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
-      fullName: json['fullName'] as String? ?? 'Nombre Desconocido',
+      id: json['id'] as int? ?? 0,
+      fullName: json['fullName'] as String? ?? 'Usuario',
       email: json['email'] as String? ?? 'email@desconocido.com',
       ticketId: json['ticketId'] as String?,
       ticketStatus: json['ticketStatus'] as String?,
@@ -31,9 +25,7 @@ class User {
 
   Map<String, dynamic> toJson() {
     return {
-      'clientNumber': clientNumber,
-      'status': status,
-      'balance': balance,
+      'id': id,
       'fullName': fullName,
       'email': email,
       'ticketId': ticketId,

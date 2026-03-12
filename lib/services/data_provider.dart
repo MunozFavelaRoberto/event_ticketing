@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kiosko/models/user.dart';
@@ -24,7 +23,7 @@ class DataProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isUnauthorized = false;
   bool _isInitialLoading = true;
-  bool _hasAttemptedFetch = false; // Track si ya intentamos obtener datos
+  bool _hasAttemptedFetch = false;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
@@ -78,6 +77,19 @@ class DataProvider extends ChangeNotifier {
     }
   }
 
+  /// Establecer usuario después de login exitoso (desde AuthService)
+  void setUserFromLogin(int id, String fullName, String email) {
+    _user = User(
+      id: id,
+      fullName: fullName,
+      email: email,
+    );
+    _isUnauthorized = false;
+    _isInitialLoading = false;
+    _cacheUser();
+    notifyListeners();
+  }
+
   Future<void> fetchUser() async {
     _isLoading = true;
     _hasAttemptedFetch = true;
@@ -90,18 +102,14 @@ class DataProvider extends ChangeNotifier {
         });
         debugPrint('Profile API response: $data');
 
-        // simplified: assume data contains user directly
         final profileData = data['data']?['item'];
         if (profileData != null) {
-          final userData = profileData['user'];
           _user = User(
-            clientNumber: profileData['client_number'] as String? ?? 'N/A',
-            status: 'Activo',
-            balance: 0.0,
-            fullName: userData?['full_name'] as String? ?? 'Usuario',
-            email: userData?['email'] as String? ?? 'email@desconocido.com',
-            ticketId: profileData['ticket_id'] as String?, // ID encriptado del boleto
-            ticketStatus: profileData['ticket_status'] as String?, // Estado del boleto
+            id: profileData['id'] as int? ?? 0,
+            fullName: profileData['full_name'] as String? ?? 'Usuario',
+            email: profileData['email'] as String? ?? 'email@desconocido.com',
+            ticketId: profileData['ticket_id'] as String?,
+            ticketStatus: profileData['ticket_status'] as String?,
           );
           _isUnauthorized = false;
           _isInitialLoading = false;
@@ -128,7 +136,6 @@ class DataProvider extends ChangeNotifier {
     }
   }
 
-
   // Método para actualizar el usuario
   void updateUser(User newUser) {
     _user = newUser;
@@ -140,11 +147,11 @@ class DataProvider extends ChangeNotifier {
     _isUnauthorized = false;
     _user = null;
     _hasAttemptedFetch = false;
-    _clearUserCache(); // Limpiar cache al hacer logout
+    _clearUserCache();
     notifyListeners();
   }
 
-  // Método para establecer usuario manualmente (después de login exitoso)
+  // Método para establecer usuario manualmente
   void setUser(User user) {
     _user = user;
     _isUnauthorized = false;
@@ -152,8 +159,7 @@ class DataProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-
-  // Refresh completo para pull-to-refresh (usa notifyListeners)
+  // Refresh completo para pull-to-refresh
   Future<void> refreshAllData() async {
     _isInitialLoading = false;
     await fetchUser();
@@ -161,7 +167,6 @@ class DataProvider extends ChangeNotifier {
   }
 
   /// Obtiene el ticket del usuario desde la API
-  /// Retorna el ID encriptado del boleto para generar el QR
   Future<String?> fetchTicket() async {
     try {
       final token = await _authService?.getToken();
@@ -179,9 +184,7 @@ class DataProvider extends ChangeNotifier {
         // Actualizar el usuario con los datos del ticket
         if (_user != null && ticketId != null) {
           _user = User(
-            clientNumber: _user!.clientNumber,
-            status: _user!.status,
-            balance: _user!.balance,
+            id: _user!.id,
             fullName: _user!.fullName,
             email: _user!.email,
             ticketId: ticketId,

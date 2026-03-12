@@ -1,22 +1,22 @@
 class AuthResponse {
-  final String msg;
+  final String message;
   final AuthData data;
 
   AuthResponse({
-    required this.msg,
+    required this.message,
     required this.data,
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     return AuthResponse(
-      msg: json['msg'] as String,
+      message: json['message'] as String? ?? '',
       data: AuthData.fromJson(json['data'] as Map<String, dynamic>),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'msg': msg,
+      'message': message,
       'data': data.toJson(),
     };
   }
@@ -68,23 +68,15 @@ class Auth {
 
 class UserData {
   final int id;
-  final String name;
-  final String? paternalSurname;
-  final String? maternalSurname;
-  final String email;
   final int roleId;
-  final String uiid;
+  final String email;
   final String fullName;
   final Role role;
 
   UserData({
     required this.id,
-    required this.name,
-    this.paternalSurname,
-    this.maternalSurname,
-    required this.email,
     required this.roleId,
-    required this.uiid,
+    required this.email,
     required this.fullName,
     required this.role,
   });
@@ -92,12 +84,8 @@ class UserData {
   factory UserData.fromJson(Map<String, dynamic> json) {
     return UserData(
       id: json['id'] as int,
-      name: json['name'] as String,
-      paternalSurname: json['paternal_surname'] as String?,
-      maternalSurname: json['maternal_surname'] as String?,
-      email: json['email'] as String,
       roleId: json['role_id'] as int,
-      uiid: json['uiid'] as String,
+      email: json['email'] as String,
       fullName: json['full_name'] as String,
       role: Role.fromJson(json['role'] as Map<String, dynamic>),
     );
@@ -106,12 +94,8 @@ class UserData {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
-      'paternal_surname': paternalSurname,
-      'maternal_surname': maternalSurname,
-      'email': email,
       'role_id': roleId,
-      'uiid': uiid,
+      'email': email,
       'full_name': fullName,
       'role': role.toJson(),
     };

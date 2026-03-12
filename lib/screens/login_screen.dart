@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kiosko/services/auth_service.dart';
 import 'package:kiosko/services/data_provider.dart';
-import 'package:kiosko/models/biometric_type_info.dart';
 import 'package:kiosko/utils/app_routes.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -29,9 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Variable indicador de carga
   bool _isLoading = false;
-  bool _showBiometricButton = false;
   bool _obscurePassword = true;
-  List<BiometricTypeInfo> _enabledBiometrics = [];
 
   // Validación de usuario
   String? _validateUser(String? value) {
@@ -62,7 +59,6 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _authService = Provider.of<AuthService>(context, listen: false);
-    _initBiometricVisibility();
     
     // Agregar listeners para detectar cuando el campo pierde el foco
     _userFocusNode.addListener(() {
@@ -80,11 +76,18 @@ class _LoginScreenState extends State<LoginScreen> {
   
   // Función que centraliza el éxito del login
   Future<void> _handleLoginSuccess() async {
-    await _authService.saveLoginState(); // Guardamos sesión en disco
-    
-    // Resetear estado de autorización en DataProvider
+    // Guardar datos del usuario en DataProvider
     if (!mounted) return;
     final dataProvider = Provider.of<DataProvider>(context, listen: false);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    
+    dataProvider.setUserFromLogin(
+      authService.loggedUserId ?? 0,
+      authService.loggedUserFullName ?? 'Usuario',
+      authService.loggedUserEmail ?? 'email@desconocido.com',
+    );
+    
+    // Resetear estado de autorización en DataProvider
     dataProvider.resetUnauthorized();
     
     if (!mounted) return;
@@ -105,16 +108,25 @@ class _LoginScreenState extends State<LoginScreen> {
     final pass = _passController.text.trim();
 
     if (email.isNotEmpty && pass.isNotEmpty) {
-      final response = await _authService.login(email, pass);
-      
-      // Delay obligatorio de 1 segundo para mostrar al usuario que su petición está siendo procesada
-      await Future.delayed(const Duration(seconds: 1));
-      
-      if (response != null) {
-        // Guardar credenciales de forma segura para reactivación con biometría
-        await _authService.saveCredentials(email, pass);
-        await _handleLoginSuccess();
-      } else {
+      try {
+        final response = await _authService.login(email, pass);
+        
+        // Delay obligatorio de 1 segundo para mostrar al usuario que su petición está siendo procesada
+        await Future.delayed(const Duration(seconds: 1));
+        
+        if (response != null) {
+          await _handleLoginSuccess();
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Credenciales incorrectas'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        // Mostrar error genérico para no revelar detalles internos
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -137,114 +149,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Login por biometría específica
-  Future<void> _loginWithBiometrics(BiometricTypeInfo biometric) async {
-    setState(() => _isLoading = true);
-
-    // Verificar que la biometría sigue habilitada
-    final isEnabled = await _authService.isBiometricEnabled(biometric.type);
-
-    if (!isEnabled) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Esta biometría ha sido deshabilitada'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-      return;
-    }
-
-    // Autenticar con biometría
-    bool authenticated = await _authService.authenticateWithType(biometric.type);
-    
-    if (authenticated) {
-      // Verificar si hay token válido
-      final tokenValid = await _authService.verifyToken();
-      
-      if (tokenValid) {
-        // Token válido, solo restaurar estado
-        await _authService.saveLoginState();
-        await _handleLoginSuccess();
-      } else {
-        // Token expiró, usar credenciales guardadas para hacer login
-        final loginSuccess = await _authService.loginWithSavedCredentials();
-        
-        if (loginSuccess) {
-          await _handleLoginSuccess();
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Sesión expirada. Por favor inicia sesión con email y contraseña.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Autenticación con ${biometric.displayName} fallida'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _initBiometricVisibility() async {
-    // Verificar si hay credenciales guardadas (para reactivación de sesión)
-    final hasCredentials = await _authService.hasSavedCredentials();
-    
-    // Verificar si hay biometría disponible
-    final canCheck = await _authService.canCheckBiometrics;
-    
-    List<BiometricTypeInfo> enabledBiometrics = [];
-    
-    // Mostrar biometría si:
-    // 1. Hay credenciales guardadas (para reactivación de sesión), O
-    // 2. Hay token válido (sesión activa previamente)
-    final tokenValid = await _authService.verifyToken();
-    
-    if ((hasCredentials || tokenValid) && canCheck) {
-      final available = await _authService.getAvailableBiometrics();
-      
-      // Normalizar: eliminar duplicados de strong/weak
-      final addedTypes = <String>{}; // track por displayName
-      
-      for (final biometric in available) {
-        // Verificar si está habilitada
-        final isEnabled = await _authService.isBiometricEnabled(biometric.type);
-        if (!isEnabled) continue;
-        
-        // Evitar duplicados
-        if (addedTypes.contains(biometric.displayName)) continue;
-        
-        enabledBiometrics.add(biometric);
-        addedTypes.add(biometric.displayName);
-      }
-    }
-    
-    if (!mounted) return;
-    setState(() {
-      _showBiometricButton = enabledBiometrics.isNotEmpty;
-      _enabledBiometrics = enabledBiometrics;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final Color blueish = Color.lerp(colorScheme.primary, Colors.lightBlueAccent, 0.7) ?? colorScheme.primary;
     final isBlocked = _isLoading;
 
     return PopScope(
@@ -390,64 +298,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
-                  // Mostrar bloque biométrico completo sólo si corresponde
-                  if (_showBiometricButton) ...[
-                    const SizedBox(height: 40),
-
-                    // Divisor visual
-                    Row(
-                      children: [
-                        const Expanded(child: Divider()),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Text("O ingresa con", style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withAlpha((0.7 * 255).round()))),
-                        ),
-                        const Expanded(child: Divider()),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Botón Biométrico dinámico (muestra los métodos habilitados)
-                    AbsorbPointer(
-                      absorbing: isBlocked,
-                      child: Opacity(
-                        opacity: isBlocked ? 0.5 : 1.0,
-                        child: Wrap(
-                          spacing: 16,
-                          runSpacing: 12,
-                          alignment: WrapAlignment.center,
-                          children: _enabledBiometrics.map((biometric) {
-                            return GestureDetector(
-                              onTap: _isLoading ? null : () => _loginWithBiometrics(biometric),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                                decoration: BoxDecoration(
-                                  color: blueish.withAlpha((0.08 * 255).round()),
-                                  borderRadius: BorderRadius.circular(15),
-                                  border: Border.all(color: blueish.withAlpha((0.5 * 255).round())),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Icon(biometric.icon, size: 40, color: blueish),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      biometric.displayName,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: blueish, 
-                                        fontWeight: FontWeight.w600
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

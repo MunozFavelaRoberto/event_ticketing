@@ -12,9 +12,6 @@ import 'package:kiosko/services/data_provider.dart';
 class FakeAuthService extends AuthService {
   @override
   Future<bool> isLoggedIn() async => false;
-
-  @override
-  Future<bool> isAnyBiometricEnabled() async => false;
 }
 
 

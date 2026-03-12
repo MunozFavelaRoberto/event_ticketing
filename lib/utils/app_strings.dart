@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 class AppStrings {
   // Constructor privado para evitar instanciación
   AppStrings._();
@@ -35,37 +33,12 @@ class AppStrings {
   static const String ticketErrorNetwork = "Error de red. Verifica tu conexión.";
   static const String ticketErrorUnknown = "Error desconocido";
 
-  // ========== Biometric Lock ==========
-  static const String biometricTitle = "Kiosko Protegido";
-  static const String biometricConfirmIdentity = "Confirma tu identidad";
-  static const String biometricIdentify = "Identifícate para continuar";
-  static const String biometricUse = "Usar";
-  static const String biometricUsePassword = "Entrar con contraseña";
-  static const String biometricTooManyAttempts = "Demasiados intentos. Usa contraseña.";
-
   // ========== Login ==========
   static const String loginTitle = "Iniciar Sesión";
   static const String loginUser = "Usuario";
   static const String loginPassword = "Contraseña";
   static const String loginInvalidCredentials = "Credenciales incorrectas";
   static const String loginFillFields = "Por favor, completa todos los campos";
-
-  // ========== Profile ==========
-  static const String profileTitle = "Mi perfil";
-  static const String profileFullName = "Nombre completo";
-  static const String profileEmail = "Correo electrónico";
-  static const String profileEditEmail = "Editar correo electrónico";
-  static const String profileEmailUpdated = "Correo actualizado correctamente";
-  static const String profileErrorUpdating = "Error al actualizar el correo";
-  static const String profileDarkMode = "Modo oscuro";
-  static const String profileBiometrics = "Biometría";
-  static const String profileBiometricActive = "Seguridad activa";
-  static const String profileBiometricInactive = "Sin biometría activada";
-  static const String profileNotAvailable = "No disponible";
-  static const String profileNotSupported = "Tu dispositivo no admite biometría";
-  static const String profileLoading = "Cargando perfil...";
-  static const String profileConnectionError = "Error de conexión";
-  static const String profileLoadError = "No se pudo cargar los datos del perfil";
 
   // ========== Common ==========
   static const String save = "Guardar";
@@ -78,24 +51,4 @@ class AppStrings {
   static const String logoutConfirm = "¿Estás seguro de que deseas salir?";
   static const String loggingOut = "Cerrando sesión...";
   static const String loading = "Cargando...";
-}
-
-/// Clase para manejar la localización de la app
-/// Uso futuro con flutter_localizations
-class AppLocalizations {
-  // Locale actual - se configurará dinámicamente
-  static Locale _locale = const Locale('es'); // Default: Español
-
-  static Locale get locale => _locale;
-
-  static void setLocale(Locale locale) {
-    _locale = locale;
-  }
-
-  /// Obtener string traducida según el locale actual
-  static String get(String key) {
-    // Implementación futura con Map<String, Map<String, String>>
-    // Por ahora retorna la clave
-    return key;
-  }
 }

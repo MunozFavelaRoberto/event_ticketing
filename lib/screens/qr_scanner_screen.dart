@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:kiosko/services/api_service.dart';
 import 'package:flutter/services.dart';
 import 'package:kiosko/screens/ticket_result_screen.dart';
+import 'package:kiosko/utils/app_strings.dart';
 
 enum ScanState { waiting, validating, success, failure, permissionDenied, networkError }
 
@@ -39,22 +40,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
   bool _isInitialized = false;
   bool _isProcessing = false; // Para bloquear UI durante validación
 
-  // Textos
-  static const String _scanningText = 'ESCANEANDO...';
-  static const String _accessGranted = '¡PASA!';
-  static const String _accessDenied = 'NO PASA';
-  static const String _permissionDeniedText = 'Permiso de cámara denegado. Habilita la cámara en Configuración.';
-  static const String _networkErrorText = 'Error de red. Verifica tu conexión.';
-  static const String _tryAgain = 'Intentar de nuevo';
-
   static const Map<TicketErrorType, String> _errorMessages = {
-    TicketErrorType.invalidFormat: 'Qr inválido',
-    TicketErrorType.alreadyUsed: 'Boleto ya utilizado',
-    TicketErrorType.notFound: 'Boleto no encontrado',
-    TicketErrorType.eventNotStarted: 'El evento aún no ha iniciado',
-    TicketErrorType.eventEnded: 'El evento ha finalizado',
-    TicketErrorType.networkError: 'Error de red. Verifica tu conexión.',
-    TicketErrorType.unknown: 'Error desconocido',
+    TicketErrorType.invalidFormat: AppStrings.ticketErrorInvalid,
+    TicketErrorType.alreadyUsed: AppStrings.ticketErrorUsed,
+    TicketErrorType.notFound: AppStrings.ticketErrorNotFound,
+    TicketErrorType.eventNotStarted: AppStrings.ticketErrorEventNotStarted,
+    TicketErrorType.eventEnded: AppStrings.ticketErrorEventEnded,
+    TicketErrorType.networkError: AppStrings.ticketErrorNetwork,
+    TicketErrorType.unknown: AppStrings.ticketErrorUnknown,
   };
 
   @override
@@ -179,7 +172,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
       if (errorStr.contains('network') || errorStr.contains('socket') || errorStr.contains('conexión')) {
         _navigateToResult(
           isValid: false,
-          message: 'Error de red. Verifica tu conexión.',
+          message: AppStrings.scannerNetworkError,
           errorType: 'networkError',
         );
       } else {
@@ -259,7 +252,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           mainAxisSize: MainAxisSize.min,
           children: [ 
             const Text(
-              _scanningText,
+              AppStrings.scannerScanning,
               style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
@@ -272,7 +265,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           children: const [
             CircularProgressIndicator(color: Colors.green),
             SizedBox(height: 16),
-            Text('Validando...', style: TextStyle(color: Colors.white, fontSize: 18)),
+            Text(AppStrings.scannerValidating, style: TextStyle(color: Colors.white, fontSize: 18)),
           ],
         );
       case ScanState.success:
@@ -281,7 +274,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           children: const [
             Icon(Icons.check_circle, color: Colors.white, size: 150),
             SizedBox(height: 8),
-            Text(_accessGranted, style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900)),
+            Text(AppStrings.scannerAccessGranted, style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900)),
           ],
         );
       case ScanState.failure:
@@ -290,7 +283,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           children: [
             const Icon(Icons.cancel, color: Colors.white, size: 150),
             const SizedBox(height: 8),
-            const Text(_accessDenied, style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900)),
+            Text(AppStrings.scannerAccessDenied, style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
             Text(_getErrorMessage(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 16)),
           ],
@@ -301,12 +294,12 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           children: [
             const Icon(Icons.signal_wifi_off, color: Colors.white, size: 150),
             const SizedBox(height: 8),
-            const Text(_networkErrorText, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+            Text(AppStrings.scannerNetworkError, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: _restartScanner,
               icon: const Icon(Icons.refresh),
-              label: const Text(_tryAgain),
+              label: const Text(AppStrings.scannerTryAgain),
             ),
           ],
         );
@@ -316,7 +309,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
           children: [
             const Icon(Icons.no_photography, color: Colors.white, size: 150),
             const SizedBox(height: 8),
-            const Text(_permissionDeniedText, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 20)),
+            Text(AppStrings.scannerPermissionDenied, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 20)),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () {
@@ -324,7 +317,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
                 setState(() => _state = ScanState.waiting);
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
+              label: const Text(AppStrings.scannerTryAgain),
             ),
           ],
         );
@@ -397,7 +390,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
     return Scaffold(
       backgroundColor: _backgroundColor(),
       appBar: AppBar(
-        title: const Text('Escaner de Boletos'),
+        title: const Text(AppStrings.scannerTitle),
         backgroundColor: _backgroundColor(),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -459,9 +452,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
                               ),
                         const SizedBox(width: 8),
                         Text(
-                          _state == ScanState.waiting ? 'Apunta al código QR' :
-                          _state == ScanState.validating ? 'Validando...' :
-                          _state == ScanState.success ? 'Acceso concedido' : 'Acceso denegado',
+                          _state == ScanState.waiting ? AppStrings.scannerPointAtQr :
+                          _state == ScanState.validating ? AppStrings.scannerValidating :
+                          _state == ScanState.success ? AppStrings.scannerAccessGranted : AppStrings.scannerAccessDenied,
                           style: const TextStyle(color: Colors.white, fontSize: 14),
                         ),
                       ],

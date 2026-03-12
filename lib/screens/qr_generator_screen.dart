@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:kiosko/services/data_provider.dart';
+import 'package:kiosko/utils/app_strings.dart';
 
 class QrGeneratorScreen extends StatefulWidget {
   const QrGeneratorScreen({super.key});
@@ -11,14 +12,6 @@ class QrGeneratorScreen extends StatefulWidget {
 }
 
 class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
-  // Constantes para los textos
-  static const String _title = "Mi boleto digital";
-  static const String _instructionText = "Muestra este código en la entrada";
-  static const String _noQrDataError = "No se pudo generar el QR: datos de usuario no disponibles.";
-  static const String _noTicketError = "No tienes un boleto activo en este momento.";
-  static const String _loadingQr = "Generando QR...";
-  static const String _retryButton = "Reintentar";
-
   // Códigos QR hardcodeados para simulación/testing
   // IMPORTANTE: Estos códigos deben coincidir con los de ApiService.validateTicket()
   static const Map<String, String> _hardcodedQrCodes = {
@@ -76,7 +69,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
         _qrData = ticketId;
       } else {
         // No hay datos disponibles
-        _errorMessage = _noTicketError;
+        _errorMessage = AppStrings.qrNoTicket;
       }
     } catch (e) {
       _errorMessage = "Error al obtener datos del QR: $e";
@@ -114,7 +107,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
     final isBlocked = _isLoading || _isRetrying;
     
     return Scaffold(
-      appBar: AppBar(title: const Text(_title)),
+      appBar: AppBar(title: const Text(AppStrings.qrTitle)),
       body: AbsorbPointer(
         absorbing: isBlocked,
         child: Opacity(
@@ -124,7 +117,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  _instructionText,
+                  AppStrings.qrInstruction,
                   style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
                 const SizedBox(height: 20),
@@ -147,7 +140,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
         children: const [
           CircularProgressIndicator(color: Colors.green),
           SizedBox(height: 10),
-          Text(_loadingQr),
+          Text(AppStrings.qrLoading),
         ],
       );
     }
@@ -202,7 +195,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Text(
-        _noQrDataError,
+        AppStrings.qrNoData,
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 18, color: Colors.red),
       ),
@@ -218,7 +211,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
     switch (_selectedQrCode) {
       case 'valid':
         statusColor = Colors.green;
-        statusText = "Boleto válido";
+        statusText = AppStrings.qrValid;
         statusIcon = Icons.check_circle;
         break;
       case 'invalid':
@@ -238,7 +231,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
         break;
       default:
         statusColor = Colors.green;
-        statusText = "Boleto válido";
+        statusText = AppStrings.qrValid;
         statusIcon = Icons.check_circle;
     }
 
@@ -275,7 +268,7 @@ class _QrGeneratorScreenState extends State<QrGeneratorScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.refresh),
-        label: Text(_isRetrying ? "Cargando..." : _retryButton),
+        label: Text(_isRetrying ? AppStrings.loading : AppStrings.retry),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,

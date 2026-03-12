@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kiosko/services/theme_provider.dart';
 import 'package:kiosko/services/data_provider.dart';
@@ -7,10 +6,8 @@ import 'package:kiosko/services/api_service.dart';
 import 'package:kiosko/services/auth_service.dart';
 import 'package:kiosko/screens/login_screen.dart';
 import 'package:kiosko/screens/home_screen.dart';
-import 'package:kiosko/screens/biometric_lock_screen.dart';
 import 'package:kiosko/screens/qr_generator_screen.dart';
 import 'package:kiosko/screens/qr_scanner_screen.dart';
-import 'package:kiosko/screens/profile_screen.dart';
 import 'package:kiosko/utils/app_routes.dart';
 
 Future<void> main() async {
@@ -38,7 +35,6 @@ Future<void> main() async {
 
 // Navegador global para empujar rutas desde Widgets fuera del árbol
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
-const MethodChannel _screenChannel = MethodChannel('com.example.kiosko/screen');
 
 class KioskoApp extends StatelessWidget {
   const KioskoApp({super.key});
@@ -59,7 +55,7 @@ class KioskoApp extends StatelessWidget {
       darkTheme: ThemeData.dark(useMaterial3: true),
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
       builder: (context, child) {
-        return LockWrapper(child: child ?? const SizedBox.shrink());
+        return _UnauthorizedWrapper(child: child ?? const SizedBox.shrink());
       },
       home: const CheckAuthScreen(),
       routes: {
@@ -67,90 +63,15 @@ class KioskoApp extends StatelessWidget {
         AppRoutes.home: (context) => const HomeScreen(),
         AppRoutes.generateQr: (context) => const QrGeneratorScreen(),
         AppRoutes.scanQr: (context) => const QrScannerScreen(),
-        AppRoutes.profile: (context) => const ProfileScreen(),
       },
     );
   }
 }
 
-class LockWrapper extends StatefulWidget {
+/// Wrapper que muestra pantalla de "No Autorizado" cuando es necesario
+class _UnauthorizedWrapper extends StatelessWidget {
   final Widget child;
-  const LockWrapper({required this.child, super.key});
-
-  @override
-  State<LockWrapper> createState() => _LockWrapperState();
-}
-
-class _LockWrapperState extends State<LockWrapper> with WidgetsBindingObserver {
-  late final AuthService _authService;
-  bool _wasPaused = false;
-  DateTime? _pausedAt;
-  bool _screenWasLocked = false;
-  bool _isLockScreenActive = false;
-  static const Duration _maxIdleForQuickUnlock = Duration(minutes: 5);
-
-  @override
-  void initState() {
-    super.initState();
-    _authService = Provider.of<AuthService>(context, listen: false);
-    WidgetsBinding.instance.addObserver(this);
-    _screenChannel.setMethodCallHandler((call) async {
-      if (call.method == 'screenEvent') {
-        final String event = call.arguments as String? ?? '';
-        if (event == 'off') {
-          _pausedAt = DateTime.now();
-          _wasPaused = true;
-          _screenWasLocked = true;
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _wasPaused = true;
-      _pausedAt = DateTime.now();
-    }
-
-    if (state == AppLifecycleState.resumed) {
-      if (_wasPaused) {
-        final now = DateTime.now();
-        final diff = _pausedAt == null ? Duration.zero : now.difference(_pausedAt!);
-        final longPause = diff > _maxIdleForQuickUnlock;
-        if (longPause || _screenWasLocked) {
-          _tryLockIfNeeded(true);
-        }
-        _screenWasLocked = false;
-      }
-      _wasPaused = false;
-    }
-  }
-
-  Future<void> _tryLockIfNeeded(bool longPause) async {
-    if (_isLockScreenActive) return;
-    
-    final use = await _authService.isAnyBiometricEnabled();
-    if (!use) return;
-
-    _isLockScreenActive = true;
-    
-    if (!mounted) return;
-
-    await appNavigatorKey.currentState?.push(MaterialPageRoute(
-      builder: (context) => BiometricLockScreen(longPause: longPause, forceToHome: false),
-      fullscreenDialog: true,
-    ));
-    
-    if (!mounted) return;
-    _isLockScreenActive = false;
-  }
+  const _UnauthorizedWrapper({required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -161,27 +82,23 @@ class _LockWrapperState extends State<LockWrapper> with WidgetsBindingObserver {
     // 1. Se haya intentado obtener los datos del usuario (hasAttemptedFetch)
     // 2. Y el servidor haya rechazado la solicitud explícitamente
     if (dataProvider.hasAttemptedFetch && dataProvider.isUnauthorized) {
-      return _buildUnauthorizedScreen(context, dataProvider);
-    }
-    
-    return widget.child;
-  }
-
-  Widget _buildUnauthorizedScreen(BuildContext context, DataProvider dataProvider) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      body: Center(
-        child: Text(
-          'NO AUTORIZADO',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.red.shade700,
-            letterSpacing: 2,
+      return Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        body: Center(
+          child: Text(
+            'NO AUTORIZADO',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.red.shade700,
+              letterSpacing: 2,
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
+    
+    return child;
   }
 }
 
@@ -202,19 +119,11 @@ class _CheckAuthScreenState extends State<CheckAuthScreen> {
   Future<void> _checkAuth() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     final bool loggedIn = await authService.isLoggedIn();
-    final bool bioEnabled = await authService.isAnyBiometricEnabled();
     
     if (!mounted) return;
 
     if (loggedIn) {
-      if (bioEnabled) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const BiometricLockScreen(forceToHome: true)),
-        );
-      } else {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
-      }
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
     } else {
       Navigator.pushReplacementNamed(context, AppRoutes.login);
     }
