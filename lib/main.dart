@@ -6,7 +6,6 @@ import 'package:kiosko/services/api_service.dart';
 import 'package:kiosko/services/auth_service.dart';
 import 'package:kiosko/screens/login_screen.dart';
 import 'package:kiosko/screens/home_screen.dart';
-import 'package:kiosko/screens/qr_generator_screen.dart';
 import 'package:kiosko/screens/qr_scanner_screen.dart';
 import 'package:kiosko/utils/app_routes.dart';
 
@@ -61,7 +60,6 @@ class KioskoApp extends StatelessWidget {
       routes: {
         AppRoutes.login: (context) => const LoginScreen(),
         AppRoutes.home: (context) => const HomeScreen(),
-        AppRoutes.generateQr: (context) => const QrGeneratorScreen(),
         AppRoutes.scanQr: (context) => const QrScannerScreen(),
       },
     );

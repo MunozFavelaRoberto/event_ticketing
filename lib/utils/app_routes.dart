@@ -6,7 +6,6 @@ class AppRoutes {
   static const String home = '/home';
 
   // Rutas de tickets QR
-  static const String generateQr = '/generate-qr';
   static const String scanQr = '/scan-qr';
 
   // Constructor privado para evitar instanciación

@@ -31,16 +31,6 @@ class HomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton.icon(
-              icon: const Icon(Icons.qr_code),
-              label: const Text('Mostrar mi QR'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.generateQr),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
               icon: const Icon(Icons.qr_code_scanner),
               label: const Text('Escanear QR'),
               style: ElevatedButton.styleFrom(

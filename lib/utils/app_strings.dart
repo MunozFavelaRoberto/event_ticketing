@@ -2,16 +2,6 @@ class AppStrings {
   // Constructor privado para evitar instanciación
   AppStrings._();
 
-  // ========== QR Generator ==========
-  static const String qrTitle = "Mi boleto digital";
-  static const String qrInstruction = "Muestra este código en la entrada";
-  static const String qrLoading = "Generando QR...";
-  static const String qrNoData = "No se pudo generar el QR: datos de usuario no disponibles.";
-  static const String qrNoTicket = "No tienes un boleto activo en este momento.";
-  static const String qrError = "Error al cargar el boleto. Intenta de nuevo.";
-  static const String qrRetry = "Reintentar";
-  static const String qrValid = "Boleto válido";
-
   // ========== QR Scanner ==========
   static const String scannerTitle = "Escaner de Boletos";
   static const String scannerScanning = "ESCANEANDO...";
