@@ -166,7 +166,7 @@ class _TicketResultScreenState extends State<TicketResultScreen>
                     onPressed: _returnToScanner,
                     icon: const Icon(Icons.qr_code_scanner, size: 28),
                     label: const Text(
-                      'Escanear otro ticket',
+                      'Volver al escáner',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     style: ElevatedButton.styleFrom(
