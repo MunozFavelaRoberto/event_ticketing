@@ -98,14 +98,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
       final Map<String, dynamic>? data = result['data'] as Map<String, dynamic>?;
       
       // Determinar si fue exitoso:
-      // is_checked_in = 1 → NO está checkeado (puede pasar = true)
-      // is_checked_in = 0 → YA está checkeado (no puede pasar = false)
+      // is_checked_in = 1 → NO está checkeado pero no puede pasar
+      // is_checked_in = 0 → YA está checkeado y puede pasar
       bool isValid = false;
       if (data != null) {
         final isCheckedIn = data['is_checked_in'] as int? ?? 1;
-        // Si es 1, NO está checkeado → puede pasar
-        // Si es 0, YA está checkeado → no puede pasar
-        isValid = isCheckedIn == 1;
+        // Si es 0, está checkeado → puede pasar
+        // Si es 1, no está checkeado → no puede pasar
+        isValid = isCheckedIn == 0;
       }
       
       // Extraer datos del asistente
